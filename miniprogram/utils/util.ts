@@ -17,3 +17,21 @@ const formatNumber = (n: number) => {
   const s = n.toString()
   return s[1] ? s : '0' + s
 }
+
+export function getSetting():Promise<WechatMiniprogram.GetSettingSuccessCallbackResult>{
+  return new Promise((resolve, reject)=>{
+    wx.getSetting({
+      success:res =>resolve(res),
+      fail:err =>reject(err),
+    })
+  })
+}
+export function getUserInfo():Promise<WechatMiniprogram.GetUserInfoSuccessCallbackResult>{
+  return new Promise((resolve, reject)=>{
+    wx.getUserInfo({
+      success: resolve,
+      fail:reject,
+    })
+  })
+}
+

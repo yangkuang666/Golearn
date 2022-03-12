@@ -1,4 +1,7 @@
 /**app.wxss**/
+/*小程序全局配置*/
+@import "colorui/icon.wxss";
+@import "colorui/main.wxss";
 .container {
   height: 100%;
   display: flex;

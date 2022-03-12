@@ -1,6 +1,23 @@
 Page({
 data:{
-    showPath: true,
-    values: [1,2,3,4,5],
+    showPath: false,
+    values: [
+        {
+            name: 'john',
+            id: 4,
+        },
+        {
+            name: 'ice_moss',
+            id: 3,
+        },
+        {
+            name: 'tom',
+            id: 1,
+        },
+        {
+            name: 'jiejie',
+            id: 2,
+        },
+    ]
  },
 })

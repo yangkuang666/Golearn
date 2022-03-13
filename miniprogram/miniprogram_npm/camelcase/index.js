@@ -4,20 +4,10 @@ var __DEFINE__ = function(modId, func, req) { var m = { exports: {}, _tempexport
 var __REQUIRE__ = function(modId, source) { if(!__MODS__[modId]) return require(source); if(!__MODS__[modId].status) { var m = __MODS__[modId].m; m._exports = m._tempexports; var desp = Object.getOwnPropertyDescriptor(m, "exports"); if (desp && desp.configurable) Object.defineProperty(m, "exports", { set: function (val) { if(typeof val === "object" && val !== m._exports) { m._exports.__proto__ = val.__proto__; Object.keys(val).forEach(function (k) { m._exports[k] = val[k]; }); } m._tempexports = val }, get: function () { return m._tempexports; } }); __MODS__[modId].status = 1; __MODS__[modId].func(__MODS__[modId].req, m, m.exports); } return __MODS__[modId].m.exports; };
 var __REQUIRE_WILDCARD__ = function(obj) { if(obj && obj.__esModule) { return obj; } else { var newObj = {}; if(obj != null) { for(var k in obj) { if (Object.prototype.hasOwnProperty.call(obj, k)) newObj[k] = obj[k]; } } newObj.default = obj; return newObj; } };
 var __REQUIRE_DEFAULT__ = function(obj) { return obj && obj.__esModule ? obj.default : obj; };
-__DEFINE__(1646814677075, function(require, module, exports) {
+__DEFINE__(1647081011584, function(require, module, exports) {
 
 
-const UPPERCASE = /[\p{Lu}]/u;
-const LOWERCASE = /[\p{Ll}]/u;
-const LEADING_CAPITAL = /^[\p{Lu}](?![\p{Lu}])/gu;
-const IDENTIFIER = /([\p{Alpha}\p{N}_]|$)/u;
-const SEPARATORS = /[_.\- ]+/;
-
-const LEADING_SEPARATORS = new RegExp('^' + SEPARATORS.source);
-const SEPARATORS_AND_IDENTIFIER = new RegExp(SEPARATORS.source + IDENTIFIER.source, 'gu');
-const NUMBERS_AND_IDENTIFIER = new RegExp('\\d+' + IDENTIFIER.source, 'gu');
-
-const preserveCamelCase = (string, toLowerCase, toUpperCase) => {
+const preserveCamelCase = string => {
 	let isLastCharLower = false;
 	let isLastCharUpper = false;
 	let isLastLastCharUpper = false;
@@ -25,39 +15,25 @@ const preserveCamelCase = (string, toLowerCase, toUpperCase) => {
 	for (let i = 0; i < string.length; i++) {
 		const character = string[i];
 
-		if (isLastCharLower && UPPERCASE.test(character)) {
+		if (isLastCharLower && /[a-zA-Z]/.test(character) && character.toUpperCase() === character) {
 			string = string.slice(0, i) + '-' + string.slice(i);
 			isLastCharLower = false;
 			isLastLastCharUpper = isLastCharUpper;
 			isLastCharUpper = true;
 			i++;
-		} else if (isLastCharUpper && isLastLastCharUpper && LOWERCASE.test(character)) {
+		} else if (isLastCharUpper && isLastLastCharUpper && /[a-zA-Z]/.test(character) && character.toLowerCase() === character) {
 			string = string.slice(0, i - 1) + '-' + string.slice(i - 1);
 			isLastLastCharUpper = isLastCharUpper;
 			isLastCharUpper = false;
 			isLastCharLower = true;
 		} else {
-			isLastCharLower = toLowerCase(character) === character && toUpperCase(character) !== character;
+			isLastCharLower = character.toLowerCase() === character && character.toUpperCase() !== character;
 			isLastLastCharUpper = isLastCharUpper;
-			isLastCharUpper = toUpperCase(character) === character && toLowerCase(character) !== character;
+			isLastCharUpper = character.toUpperCase() === character && character.toLowerCase() !== character;
 		}
 	}
 
 	return string;
-};
-
-const preserveConsecutiveUppercase = (input, toLowerCase) => {
-	LEADING_CAPITAL.lastIndex = 0;
-
-	return input.replace(LEADING_CAPITAL, m1 => toLowerCase(m1));
-};
-
-const postProcess = (input, toUpperCase) => {
-	SEPARATORS_AND_IDENTIFIER.lastIndex = 0;
-	NUMBERS_AND_IDENTIFIER.lastIndex = 0;
-
-	return input.replace(SEPARATORS_AND_IDENTIFIER, (_, identifier) => toUpperCase(identifier))
-		.replace(NUMBERS_AND_IDENTIFIER, m => toUpperCase(m));
 };
 
 const camelCase = (input, options) => {
@@ -65,11 +41,11 @@ const camelCase = (input, options) => {
 		throw new TypeError('Expected the input to be `string | string[]`');
 	}
 
-	options = {
-		pascalCase: false,
-		preserveConsecutiveUppercase: false,
-		...options
-	};
+	options = Object.assign({
+		pascalCase: false
+	}, options);
+
+	const postProcess = x => options.pascalCase ? x.charAt(0).toUpperCase() + x.slice(1) : x;
 
 	if (Array.isArray(input)) {
 		input = input.map(x => x.trim())
@@ -83,36 +59,23 @@ const camelCase = (input, options) => {
 		return '';
 	}
 
-	const toLowerCase = options.locale === false ?
-		string => string.toLowerCase() :
-		string => string.toLocaleLowerCase(options.locale);
-	const toUpperCase = options.locale === false ?
-		string => string.toUpperCase() :
-		string => string.toLocaleUpperCase(options.locale);
-
 	if (input.length === 1) {
-		return options.pascalCase ? toUpperCase(input) : toLowerCase(input);
+		return options.pascalCase ? input.toUpperCase() : input.toLowerCase();
 	}
 
-	const hasUpperCase = input !== toLowerCase(input);
+	const hasUpperCase = input !== input.toLowerCase();
 
 	if (hasUpperCase) {
-		input = preserveCamelCase(input, toLowerCase, toUpperCase);
+		input = preserveCamelCase(input);
 	}
 
-	input = input.replace(LEADING_SEPARATORS, '');
+	input = input
+		.replace(/^[_.\- ]+/, '')
+		.toLowerCase()
+		.replace(/[_.\- ]+(\w|$)/g, (_, p1) => p1.toUpperCase())
+		.replace(/\d+(\w|$)/g, m => m.toUpperCase());
 
-	if (options.preserveConsecutiveUppercase) {
-		input = preserveConsecutiveUppercase(input, toLowerCase);
-	} else {
-		input = toLowerCase(input);
-	}
-
-	if (options.pascalCase) {
-		input = toUpperCase(input.charAt(0)) + input.slice(1);
-	}
-
-	return postProcess(input, toUpperCase);
+	return postProcess(input);
 };
 
 module.exports = camelCase;
@@ -120,7 +83,7 @@ module.exports = camelCase;
 module.exports.default = camelCase;
 
 }, function(modId) {var map = {}; return __REQUIRE__(map[modId], modId); })
-return __REQUIRE__(1646814677075);
+return __REQUIRE__(1647081011584);
 })()
 //miniprogram-npm-outsideDeps=[]
 //# sourceMappingURL=index.js.map

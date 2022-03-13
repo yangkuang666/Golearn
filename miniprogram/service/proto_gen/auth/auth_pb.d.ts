@@ -93,11 +93,11 @@ export namespace auth {
             public toJSON(): { [k: string]: any };
         }
 
-        /** Represents an AuthSerivce */
-        class AuthSerivce extends $protobuf.rpc.Service {
+        /** Represents an AuthService */
+        class AuthService extends $protobuf.rpc.Service {
 
             /**
-             * Constructs a new AuthSerivce service.
+             * Constructs a new AuthService service.
              * @param rpcImpl RPC implementation
              * @param [requestDelimited=false] Whether requests are length-delimited
              * @param [responseDelimited=false] Whether responses are length-delimited
@@ -109,7 +109,7 @@ export namespace auth {
              * @param request LoginRequest message or plain object
              * @param callback Node-style callback called with the error, if any, and LoginResponse
              */
-            public login(request: auth.v1.ILoginRequest, callback: auth.v1.AuthSerivce.LoginCallback): void;
+            public login(request: auth.v1.ILoginRequest, callback: auth.v1.AuthService.LoginCallback): void;
 
             /**
              * Calls Login.
@@ -119,10 +119,10 @@ export namespace auth {
             public login(request: auth.v1.ILoginRequest): Promise<auth.v1.LoginResponse>;
         }
 
-        namespace AuthSerivce {
+        namespace AuthService {
 
             /**
-             * Callback as used by {@link auth.v1.AuthSerivce#login}.
+             * Callback as used by {@link auth.v1.AuthService#login}.
              * @param error Error, if any
              * @param [response] LoginResponse
              */

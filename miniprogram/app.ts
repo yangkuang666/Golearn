@@ -1,6 +1,8 @@
 // app.ts
 //import camelcaseKeys = require("camelcase-keys")
+import camelcaseKeys = require("camelcase-keys")
 import { IAppOption } from "./appoption"
+import { auth } from "./service/proto_gen/auth/auth_pb"
 //import { coolcar } from "./service/proto_gen/trip_pb"
 //import { Coolcar } from "./service/request"
 import { getSetting, getUserInfo } from "./utils/util"
@@ -22,6 +24,21 @@ App<IAppOption>({
       success: res => {
         console.log(res.code)
         //向后台发送res.code换取openId, sessionkeys, unionId
+        wx.request({
+          url: 'http://localhost:8080/v1/auth/login',
+          method: 'POST',
+          data:{
+            code: res.code
+          } as auth.v1.ILoginRequest,
+          success: res =>{
+            console.log(res.data)
+            const loginResp: auth.v1.LoginResponse = auth.v1.LoginResponse.fromObject(
+              camelcaseKeys(res.data as object))
+            console.log(loginResp)
+          },
+          fail: console.error,
+          
+        })
       },
       fail: console.error
     })

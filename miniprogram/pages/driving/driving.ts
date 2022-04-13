@@ -1,30 +1,15 @@
+import { rental } from "../../service/proto_gen/rental/rental_pb"
+import { TripService } from "../../service/trip"
+import { formatDurtion, formatfee } from "../../utils/format"
 import { routing } from "../../utils/routing"
 
-const centPerSec = 1
+const updateIntervalSec = 5
+function DurationStr(sec: number){
+    const dur = formatDurtion(sec)
+    return `${dur.hh}:${dur.mm}:${dur.ss}`
 
-function formatfee(feer: number): string{
-    return (feer/100).toFixed(2)
 
 }
-function formatDurtion(Sec:number){
-    const h = Math.floor(Sec/3600)   //转化小时
-    Sec -= h * 3600
-    const m = Math.floor(Sec/60)     //转化分钟
-    Sec -= m * 60
-    const s = Math.floor(Sec)
-    return `${padstring(h)}:${padstring(m)}:${padstring(s)}`
-}
-
-//需要将时间显示两个零，例如：0 => 00
- function padstring(n: number): string{
-    if(n < 10){
-        return '0'+n.toFixed(0)
-    }
-    else{
-        return n.toFixed(0)
-    }
-}
-
 
 Page({
     timer: undefined as number|undefined,
@@ -37,15 +22,19 @@ Page({
         },
         scale: 10,
         elapsed: '00:00:00',
-        fee: '45.72',
+        fee: '00.00',
     },
+
     //页面起始，opt为上个页面传送数据
     onLoad(opt: Record<'trip_id', string>){  //Record<'trip_id', string>表示rip_id为string类型
         const o: routing.DrivingOpt = opt
+        //o.trip_id = "6245729ad6ba9454bd0931d3"
+        this.tripID = o.trip_id
         console.log("记录行程", o.trip_id)
-
+        TripService.getTrip(o.trip_id).then(console.log)
+        console.log("gettrip sussesful")
         this.setupLocationUpdator()
-        this.setupTimer()
+        this.setupTimer(this.tripID)
     },
 
     onUnload(){
@@ -56,18 +45,26 @@ Page({
     },
 
     onEndTripTap(){
-        wx.showLoading({
-            title: "加载中",
-            mask: true,   //保护按钮
-        }),
-        setTimeout(() => {
-            wx.redirectTo({
-                url: "/pages/learncss/learncss",
-                complete: () =>{
-                    wx.hideLoading()
-                }
+        TripService.finishTrip(this.tripID).then(() => {
+            wx.showLoading({
+                title: "加载中",
+                mask: true,   //保护按钮
+            }),
+            setTimeout(() => {
+                wx.redirectTo({
+                    url: routing.mytrips(),
+                    complete: () =>{
+                        wx.hideLoading()
+                    }
+                })
+            }, 3000); 
+        }).catch(err =>{
+            console.error(err)
+            wx.showToast({
+                title: "结束行程失败",
+                icon: "none",
             })
-        }, 3000);   
+        })
     },
 
     setupLocationUpdator(){
@@ -87,17 +84,43 @@ Page({
         })
     },
     //定期向执行该函数
-    setupTimer(){
-        let elapsedSec = 0
-        let cents = 0
+    async setupTimer(tripID: string){
+        const trip = await TripService.updateTripPos(tripID)
+        //对行程状态进行保护
+        if (trip.status !== rental.v1.TripStatus.IN_PROGRESS){
+            console.log("该行程不在进行中")
+            return
+        }
+        let secSinceLastUp = 0                      //更新时间
+        let latUpdateDurationSec = trip.current!.timestampSec! - trip.start!.timestampSec!   //上一次更新的数据
+ 
+        this.setData({
+            elapsed: DurationStr(latUpdateDurationSec),
+            fee: formatfee(trip.current!.feeCent!)
+        })
+
         this.timer = setInterval(() =>{
-            elapsedSec ++
-            cents ++
-            cents *= centPerSec
+            secSinceLastUp++
+            if (secSinceLastUp % 5 === 0){
+                TripService.updateTripPos(tripID, {
+                    latitude: this.data.location.latitude,
+                    longitude: this.data.location.longitude,
+                    }).then(trip =>{
+                    console.log(trip.current?.feeCent)
+                    latUpdateDurationSec = trip.current?.timestampSec! - trip.start?.timestampSec!
+                    secSinceLastUp = 0
+                    this.setData({
+                        fee: formatfee(trip.current?.feeCent!),
+                        location: this.data.location
+                    })
+                }).catch(console.error)
+
+            }
             this.setData({
-                elapsed: formatDurtion(elapsedSec),
-                fee: formatfee(cents)
+                elapsed: DurationStr(latUpdateDurationSec + updateIntervalSec),
             })
         }, 1000)
     }
 })
+
+

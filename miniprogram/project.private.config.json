@@ -33,7 +33,7 @@
         {
           "name": "pages/lock/lock",
           "pathName": "pages/lock/lock",
-          "query": "car_id=北京—>上海",
+          "query": "car_id=梅赛德斯_奔驰AMG_苏B_8888",
           "scene": null
         },
         {

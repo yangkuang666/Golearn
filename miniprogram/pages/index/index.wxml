@@ -17,6 +17,8 @@
     </cover-view>
 
 <cover-view class="btn-container bg-green round" bindtap="onScanClicked">
-  <cover-view>快快扫我</cover-view>
+  <cover-view>扫码租车</cover-view>
 </cover-view>
 </map>
+<!-- <modal id="licModal" title="身份认证" contents="需要身份认证才能租车"></modal>
+<modal id="tripModal" title="行程中" contents="当前有正在进行的行程，将跳转到行程页面"></modal> --> -->

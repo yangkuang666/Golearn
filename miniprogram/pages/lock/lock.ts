@@ -1,9 +1,13 @@
 import { IAppOption } from "../../appoption"
+import { rental } from "../../service/proto_gen/rental/rental_pb"
+import { TripService } from "../../service/trip"
+//import { TripService } from "../../service/trip"
 import { routing } from "../../utils/routing"
 
 const shareLocationKey = "share_location"
 
 Page({
+    carID: "",
     data:{
         shareLocation: '',
         avatarURL: '',  //头像
@@ -11,6 +15,7 @@ Page({
     
     async onLoad(opt: Record<"car_id", string>){
         const o: routing.LockOpt = opt
+        this.carID = o.car_id
         console.log("您需要开锁车辆的ID:", o.car_id)
         const userInfo = await getApp<IAppOption>().globalData.userInfo
          this.setData({
@@ -35,7 +40,7 @@ Page({
         //开锁前，获取当前位置，将数据上传服务器
         wx.getLocation({
             type:'gcj02',
-            success: loc =>{
+            success: async loc =>{
                     console.log('starting a trips', {
                         location:{
                             latitude: loc.latitude,
@@ -44,8 +49,29 @@ Page({
 
                         avaterURL: this.data.shareLocation ? this.data.avatarURL: '',
                     })
-                    const tripID = 'trips123'
-
+                    if (!this.carID) {
+                        console.error("没有carID")
+                        return
+                    }
+                    
+                    let trip: rental.v1.ITripEntity
+                    try{
+                         trip = await TripService.createTrip({
+                            start: loc,
+                            carId: this.carID,
+                        })
+                        if (!trip.id){
+                            console.error("没有返回tripID:", trip)
+                            return
+                        }
+                    }catch(err) {
+                        wx.showToast({
+                            title: "创建行程失败",
+                            icon: "none"
+                        })
+                        return
+                    }
+                    
                     wx.showLoading({
                         title: "加载中",
                         mask: true,   //保护按钮
@@ -56,7 +82,7 @@ Page({
                              //url: `/pages/driving/driving?trip_id=${tripID}`
                              //使用强类型
                             url: routing.driving({     
-                                trip_id: tripID
+                                trip_id: trip.id!,
                             }),
                             complete: () =>{
                                 wx.hideLoading()

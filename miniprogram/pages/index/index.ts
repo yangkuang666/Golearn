@@ -1,8 +1,14 @@
+
+import { IAppOption } from "../../appoption"
+import { ProfileService } from "../../service/prifile"
+import { rental } from "../../service/proto_gen/rental/rental_pb"
+import { TripService } from "../../service/trip"
 import { routing } from "../../utils/routing"
 
 Page({
   isPageShowing:false,
   data: {
+    avatarURL: '',
    setting: {
     skew: 0,  
     rotate: 0,
@@ -63,6 +69,14 @@ Page({
  ]
 },
 
+
+async onLoad() {
+  const userInfo = await getApp<IAppOption>().globalData.userInfo
+  this.setData({
+    avatarURL: userInfo.avatarUrl,
+  })
+},
+
 //获取初始位置/当前位置
 onMylocationTap(){
   wx.getLocation({
@@ -85,22 +99,73 @@ onMylocationTap(){
   })
 },
 //扫描点击
-onScanClicked(){
-  //保留当前页面，跳转到应用内的register页面。但是不能跳到 tabbar 页面
-  wx.scanCode({
-    success: () =>{
-      const carID = 'car01'  //模拟后端ID
-      const redirectURL = routing.Lock({car_id: carID})  //类型强化替代：`/pages/lock/lock?car_id=${carID}` 
-      
-      wx.navigateTo({
-        //跳转至lock页面前向跳转至register页面，并将carID放在redirectURL中传至register页面
-        //最后将carID传至lock页面
-        url: routing.register({redirectURL:redirectURL})   // 类型强化替代：`/pages/register/register?redirect=${encodeURIComponent(redirectURL)}` 
+async onScanClicked(){
+  const trips = await TripService.getTrips(rental.v1.TripStatus.IN_PROGRESS)
+  if ((trips.trips?.length  || 0) > 0){
+     wx.showModal({
+      title: '行程提示',
+      content: '您有一个正在进行的行程',
+      success (res) {
+        if (res.confirm) {
+          console.log('用户点击确定')
+          wx.navigateTo({
+            url: routing.driving({
+              trip_id: trips.trips![0].id!,
+            }),
+          })
+          return
+        } else if (res.cancel) {
+          console.log('用户点击取消')
+        }
+        return
+      }
+    })
+
+  }else{
+    const carID = "梅赛德斯_奔驰AMG_苏B_0000"  //模拟后端ID
+    const redirectURL = routing.Lock({car_id: carID})  //类型强化替代：`/pages/lock/lock?car_id=${carID}` 
+    const profil = await ProfileService.getProfile()
+
+    if (profil.identityStatus === rental.v1.IdentityStatus.VERIFIED){
+      wx.showModal({
+        title: '认证提示',
+        content: '您的身份已认证',
+        success (res) {
+          if (res.confirm) {
+            console.log('用户点击确定')
+            wx.navigateTo({
+               url: redirectURL,
+            })
+            return
+
+          } else if (res.cancel) {
+            console.log('用户点击取消')
+          }
+          return
+        }
       })
-    },
-    fail:console.error,
-  })
+    }
+    else{
+      //保留当前页面，跳转到应用内的register页面。但是不能跳到 tabbar 页面
+      wx.scanCode({
+        success: async () =>{
+          
+          const carID = "梅赛德斯_奔驰AMG_苏B_0000"  //模拟后端ID
+          const redirectURL = routing.Lock({car_id: carID})  //类型强化替代：`/pages/lock/lock?car_id=${carID}` 
+          
+          wx.navigateTo({
+            //跳转至lock页面前向跳转至register页面，并将carID放在redirectURL中传至register页面
+            //最后将carID传至lock页面
+            url: routing.register({redirectURL:redirectURL})   // 类型强化替代：`/pages/register/register?redirect=${encodeURIComponent(redirectURL)}` 
+          })
+        },
+        fail:console.error,
+      })
+    // }
+  }
+}
 },
+
 
 onShow(){
   this.isPageShowing = true;
